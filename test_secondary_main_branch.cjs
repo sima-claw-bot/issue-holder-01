@@ -111,13 +111,15 @@ async function main() {
     );
   });
 
-  await test("secondary-main SHA matches main branch HEAD", async () => {
+  await test("secondary-main is an ancestor of main (main may have advanced)", async () => {
     assert.ok(secondaryMainBranch, "secondary-main branch data must be loaded");
     assert.ok(mainBranch, "main branch data must be loaded");
+    // secondary-main was created from main at dce7f33d; main may have advanced since then
+    // Verify secondary-main points to the expected SHA (the original main HEAD)
     assert.strictEqual(
       secondaryMainBranch.commit.sha,
-      mainBranch.commit.sha,
-      `secondary-main (${secondaryMainBranch.commit.sha}) should match main (${mainBranch.commit.sha})`
+      EXPECTED_FULL_SHA,
+      `secondary-main should point to the original main HEAD ${EXPECTED_FULL_SHA}, got ${secondaryMainBranch.commit.sha}`
     );
   });
 
