@@ -7,10 +7,14 @@
  *   3. Is based on secondary-main (parent commit matches secondary-main HEAD)
  *   4. Has at least one commit on top of secondary-main
  *   5. Is not protected
+ *   6. readme.md documents the feature branch creation
+ *   7. .gitignore excludes msbuild-repo/
  */
 
 const https = require("https");
 const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
 
 const OWNER = "sima-claw-bot";
 const REPO = "msbuild";
@@ -157,6 +161,55 @@ async function main() {
       featureBranch.protected,
       false,
       "Feature branch should not be protected"
+    );
+  });
+
+  // --- Local file tests ---
+
+  await test("readme.md documents the feature branch", async () => {
+    const readmePath = path.join(__dirname, "readme.md");
+    const content = fs.readFileSync(readmePath, "utf-8");
+    assert.ok(
+      content.includes("Task 2"),
+      "readme.md should contain 'Task 2' section"
+    );
+    assert.ok(
+      content.includes(FEATURE_BRANCH),
+      `readme.md should reference branch '${FEATURE_BRANCH}'`
+    );
+    assert.ok(
+      content.includes(SECONDARY_MAIN_SHA),
+      `readme.md should reference base SHA '${SECONDARY_MAIN_SHA}'`
+    );
+    assert.ok(
+      content.includes("secondary-main"),
+      "readme.md should reference secondary-main as the base"
+    );
+  });
+
+  await test("readme.md documents issue 13217 and RoslynCodeTaskFactory", async () => {
+    const readmePath = path.join(__dirname, "readme.md");
+    const content = fs.readFileSync(readmePath, "utf-8");
+    assert.ok(
+      content.includes("13217"),
+      "readme.md should reference issue 13217"
+    );
+    assert.ok(
+      content.includes("RoslynCodeTaskFactory"),
+      "readme.md should reference RoslynCodeTaskFactory"
+    );
+  });
+
+  await test(".gitignore excludes msbuild-repo/", async () => {
+    const gitignorePath = path.join(__dirname, ".gitignore");
+    assert.ok(
+      fs.existsSync(gitignorePath),
+      ".gitignore file should exist"
+    );
+    const content = fs.readFileSync(gitignorePath, "utf-8");
+    assert.ok(
+      content.includes("msbuild-repo"),
+      ".gitignore should exclude msbuild-repo/"
     );
   });
 
