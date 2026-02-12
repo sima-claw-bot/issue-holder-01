@@ -19,3 +19,11 @@ Branch `fix/issue-13217-roslyn-codetaskfactory-references` has been created from
 - **Base**: `secondary-main` (SHA: `dce7f33d3e54a7626be7b1e50132e9fa0ab8f52b`)
 - **Repository**: `sima-claw-bot/msbuild`
 - **Purpose**: All code changes for fixing MSBuild issue #13217 (RoslynCodeTaskFactory missing transitive references) will be made on this branch.
+
+## Task 3: Transitive Reference Resolution Fix
+
+Modified `TryResolveAssemblyReferences` in `src/Tasks/RoslynCodeTaskFactory/RoslynCodeTaskFactory.cs` to add peer-assembly enumeration when user-specified references resolve from the `ref/` directory.
+
+- **Commit**: `3e0cb76` on `fix/issue-13217-roslyn-codetaskfactory-references`
+- **Change**: When a user-specified reference resolves from the ref/ directory, all peer DLLs in that directory are now added to the resolved assembly set, covering transitive dependencies.
+- **Build**: `Microsoft.Build.Tasks.csproj` compiles successfully with 0 errors and 0 warnings.
