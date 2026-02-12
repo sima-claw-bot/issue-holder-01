@@ -4,7 +4,9 @@
  * These tests confirm that the secondary-main branch:
  *   1. Exists in sima-claw-bot/msbuild
  *   2. Points to the expected SHA (dce7f33d...)
- *   3. Matches the main branch HEAD
+ *   3. Is an ancestor of main (was forked from main)
+ *   4. Is not protected
+ *   5. Has valid commit metadata
  */
 
 const https = require("https");
@@ -27,7 +29,6 @@ function githubGet(path) {
       },
     };
 
-    // Use GITHUB_TOKEN if available
     if (process.env.GITHUB_TOKEN) {
       options.headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
     }
@@ -70,7 +71,6 @@ async function test(name, fn) {
 async function main() {
   console.log("Testing: secondary-main branch in sima-claw-bot/msbuild\n");
 
-  // Fetch branch data once
   let secondaryMainBranch;
   let mainBranch;
 
@@ -115,11 +115,15 @@ async function main() {
     assert.ok(secondaryMainBranch, "secondary-main branch data must be loaded");
     assert.ok(mainBranch, "main branch data must be loaded");
     // secondary-main was created from main at dce7f33d; main may have advanced since then
-    // Verify secondary-main points to the expected SHA (the original main HEAD)
-    assert.strictEqual(
-      secondaryMainBranch.commit.sha,
-      EXPECTED_FULL_SHA,
-      `secondary-main should point to the original main HEAD ${EXPECTED_FULL_SHA}, got ${secondaryMainBranch.commit.sha}`
+    // Use the compare API: base...head shows the divergence
+    const res = await githubGet(
+      `/repos/${OWNER}/${REPO}/compare/${secondaryMainBranch.commit.sha}...${mainBranch.commit.sha}`
+    );
+    assert.strictEqual(res.status, 200, "Compare API should return 200");
+    // If secondary-main is ancestor of main, status is "ahead" or "identical"
+    assert.ok(
+      res.body.status === "ahead" || res.body.status === "identical",
+      `Expected main to be ahead of or identical to secondary-main, got status: ${res.body.status}`
     );
   });
 
@@ -130,6 +134,37 @@ async function main() {
       false,
       "secondary-main should not be protected"
     );
+  });
+
+  await test("secondary-main commit has valid SHA format (40 hex chars)", async () => {
+    assert.ok(secondaryMainBranch, "secondary-main branch data must be loaded");
+    const sha = secondaryMainBranch.commit.sha;
+    assert.ok(
+      /^[0-9a-f]{40}$/.test(sha),
+      `SHA should be 40 hex characters, got: ${sha}`
+    );
+  });
+
+  await test("secondary-main commit has a valid commit URL", async () => {
+    assert.ok(secondaryMainBranch, "secondary-main branch data must be loaded");
+    const url = secondaryMainBranch.commit.url;
+    assert.ok(url, "Commit should have a URL");
+    assert.ok(
+      url.includes(`/repos/${OWNER}/${REPO}/commits/`),
+      `Commit URL should reference the correct repo, got: ${url}`
+    );
+  });
+
+  await test("secondary-main commit object has expected structure", async () => {
+    const res = await githubGet(
+      `/repos/${OWNER}/${REPO}/commits/${EXPECTED_FULL_SHA}`
+    );
+    assert.strictEqual(res.status, 200, "Commit should be fetchable");
+    assert.ok(res.body.sha, "Commit should have a SHA");
+    assert.ok(res.body.commit, "Commit should have commit metadata");
+    assert.ok(res.body.commit.message, "Commit should have a message");
+    assert.ok(res.body.commit.author, "Commit should have an author");
+    assert.ok(res.body.commit.committer, "Commit should have a committer");
   });
 
   // Summary
